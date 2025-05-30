@@ -1,0 +1,87 @@
+*gemini_assist.txt* Vim-Gemini-Assist Plugin documentation
+
+==============================================================================
+CONTENTS                                        *gemini-assist-contents*
+
+1. Introduction         |gemini-assist-introduction|
+2. Installation         |gemini-assist-installation|
+3. Configuration        |gemini-assist-configuration|
+4. Usage                |gemini-assist-usage|
+   - Commands           |gemini-assist-commands|
+   - Mappings           |gemini-assist-mappings|
+
+==============================================================================
+1. Introduction                                 *gemini-assist-introduction*
+
+This plugin integrates Google's Gemini AI as a coding assistant directly
+within Vim. It provides an interface to interact with Gemini, send code snippets,
+and leverage buffer content for context-aware responses.
+
+Main features:
+- Interact with Gemini in a dedicated Vim buffer.
+- Send highlighted code to Gemini.
+- Use current buffer content for contextual prompts.
+
+==============================================================================
+2. Installation                               *gemini-assist-installation*
+
+Using Vundle (or a similar plugin manager):
+1. Add the following line to your `.vimrc` (replace with your repo URL):
+   Plugin 'your-github-username/vim-gemini-assist'
+2. Run `:PluginInstall` in Vim.
+3. Generate helptags: `:helptags ALL` (or if Vundle doesn't do it automatically).
+
+Prerequisites:
+- Vim 9.1+
+- Python 3.6+
+- `google-generativeai` Python package (`pip install google-generativeai`)
+
+==============================================================================
+3. Configuration                              *gemini-assist-configuration*
+
+Set your Gemini API key in your `.vimrc`: >
+    let g:gemini_api_key = "YOUR_GEMINI_API_KEY"
+
+You can also rename the global history variable if needed, though the default is now `g:gemini_assist_history`.
+
+==============================================================================
+4. Usage                                          *gemini-assist-usage*
+
+See commands and example mappings below.
+
+------------------------------------------------------------------------------
+Commands                                        *gemini-assist-commands*
+
+*:GeminiAssistOpen*
+    Opens the Gemini interaction window.
+
+*:GeminiAssist {message}*
+    Sends {message} to Gemini.
+    Example: >
+        :GeminiAssist Write a python function for fibonacci
+
+*:[range]GeminiAssistSelection [prompt]*
+    Sends the visually selected code in [range] to Gemini.
+    If [prompt] is provided, it's prepended to the code.
+    Example (after visually selecting code): >
+        :GeminiAssistSelection Explain this code.
+
+*:GeminiAssistBuffer {prompt}*
+    Sends the content of the current buffer with {prompt} to Gemini.
+    Example: >
+        :GeminiAssistBuffer Refactor this file for readability.
+
+------------------------------------------------------------------------------
+Mappings                                        *gemini-assist-mappings*
+
+You can add these to your `.vimrc` (customize as needed): >
+    nnoremap <silent> <leader>gao :GeminiAssistOpen<CR> " Gemini Assist Open
+    xnoremap <silent> <leader>gas :<C-u>call gemini_assist#PromptAndSendSelection('GeminiAssistSelection')<CR> " Gemini Assist Selection
+    nnoremap <silent> <leader>ga :GeminiAssist<Space> " Gemini Assist (prompt for message)
+    nnoremap <silent> <leader>gab :GeminiAssistBuffer<Space> " Gemini Assist Buffer (prompt for message)
+
+A simple visual mode mapping without an extra prompt:
+    xnoremap <silent> <leader>gax :<C-u>GeminiAssistSelection<CR> " Sends selection with default prompt
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
