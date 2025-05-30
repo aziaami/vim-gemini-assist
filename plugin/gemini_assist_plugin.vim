@@ -1,10 +1,9 @@
-# ~/.vim/plugin/gemini_assist_plugin.vim
 vim9script
 
 if exists("g:loaded_gemini_assist_plugin")
     finish
 endif
-g:loaded_gemini_assist_plugin = 1 # Corrected: Removed 'let'
+g:loaded_gemini_assist_plugin = 1
 
 var autoload_path = fnamemodify(expand('<sfile>:p'), ':h:h') .. '/autoload'
 if !isdirectory(autoload_path)
@@ -13,13 +12,15 @@ if !isdirectory(autoload_path)
 endif
 
 # --- User Commands ---
+# Corrected: Removed s: from calls to script-local functions
 command! GeminiAssistOpen call gemini_assist.OpenAssistBuffer()
 command! -nargs=+ GeminiAssist call gemini_assist.SendMessage(<q-args>)
-command! -nargs=* -range GeminiAssistSelection <line1>,<line2>call s:HandleSelection(<q-args>, <line1>, <line2>)
-command! -nargs=+ GeminiAssistBuffer call s:HandleCurrentBuffer(<q-args>)
+command! -nargs=* -range GeminiAssistSelection <line1>,<line2>call HandleSelection(<q-args>, <line1>, <line2>)
+command! -nargs=+ GeminiAssistBuffer call HandleCurrentBuffer(<q-args>)
 
 # --- Helper functions for commands ---
-def s:HandleSelection(custom_prompt_parts: list<string>, first: number, last: number)
+# Corrected: Removed s: from function definitions
+def HandleSelection(custom_prompt_parts: list<string>, first: number, last: number)
     var selected_lines = getline(first, last)
     var selected_text = join(selected_lines, "\n")
 
@@ -39,7 +40,7 @@ def s:HandleSelection(custom_prompt_parts: list<string>, first: number, last: nu
     gemini_assist.SendMessage(full_prompt)
 enddef
 
-def s:HandleCurrentBuffer(custom_prompt_parts: list<string>)
+def HandleCurrentBuffer(custom_prompt_parts: list<string>)
     var buffer_content = gemini_assist.GetCurrentBufferContent()
     if empty(buffer_content)
         echo "[GeminiAssist] Current buffer is empty."
@@ -57,7 +58,12 @@ def s:HandleCurrentBuffer(custom_prompt_parts: list<string>)
     gemini_assist.SendMessage(full_prompt)
 enddef
 
-def s:PromptAndSendSelection(base_cmd: string)
+# Corrected: Removed s: from function definition
+# This function is intended to be called by mappings defined in this plugin file (if any)
+# or if you choose to expose it via a command that then calls this.
+# For user .vimrc mappings that need to prompt, they should typically call the autoloaded version:
+# gemini_assist#PromptAndSendSelection('CommandNameToUse')
+def PromptAndSendSelection(base_cmd: string)
     var user_prompt = input("Gemini prompt for selection: ")
     if empty(user_prompt)
         echo "[GeminiAssist] Prompt cancelled."
