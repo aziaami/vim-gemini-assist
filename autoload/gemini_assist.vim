@@ -1,36 +1,35 @@
-# ~/.vim/autoload/gemini_assist.vim
 vim9script
 
 # Stores the interaction history
-var g:gemini_assist_history: list<dict<any>> = [] # Renamed
+var g:gemini_assist_history = []
 const s:python_executable: string = exepath('python3')
 const s:python_script_path: string = expand('<sfile>:h:h') .. '/python3/gemini_handler.py'
-const ASSIST_BUFFER_NAME = '__GeminiAssist__' # Renamed
+const ASSIST_BUFFER_NAME = '__GeminiAssist__'
 
 # Helper to log messages
 def Log(message: string)
-    echomsg "[GeminiAssist] " .. message # Renamed
+    echomsg "[GeminiAssist] " .. message 
 enddef
 
 # Function to call the Python script
 def CallGeminiAPI(prompt_text: string, include_history: bool = true): dict<any>
     if empty(g:gemini_api_key)
-        echoerr "[GeminiAssist] Error: g:gemini_api_key is not set. Please set it in your vimrc." # Renamed
+        echoerr "[GeminiAssist] Error: g:gemini_api_key is not set. Please set it in your vimrc." 
         return {"error": "API key not set."}
     endif
 
     if empty(s:python_executable)
-        echoerr "[GeminiAssist] Error: python3 executable not found." # Renamed
+        echoerr "[GeminiAssist] Error: python3 executable not found."
         return {"error": "python3 not found."}
     endif
     if !filereadable(s:python_script_path)
-        echoerr "[GeminiAssist] Error: Python handler script not found at " .. s:python_script_path # Renamed
+        echoerr "[GeminiAssist] Error: Python handler script not found at " .. s:python_script_path 
         return {"error": "Python handler script not found."}
     endif
 
     var current_history: list<dict<any>> = []
     if include_history
-        current_history = g:gemini_assist_history # Renamed
+        current_history = g:gemini_assist_history
     endif
 
     var request_payload = {
@@ -44,13 +43,13 @@ def CallGeminiAPI(prompt_text: string, include_history: bool = true): dict<any>
         var cmd = [s:python_executable, "-u", s:python_script_path]
         var response_text = system(cmd, payload_json)
     catch /.*/
-        echoerr "[GeminiAssist] Error calling Python script: " .. v:exception # Renamed
+        echoerr "[GeminiAssist] Error calling Python script: " .. v:exception 
         var err_dict = {"error": "Failed to execute Python script. " .. v:exception}
         return err_dict
     endtry
 
     if empty(response_text)
-        echoerr "[GeminiAssist] Error: Empty response from Python script." # Renamed
+        echoerr "[GeminiAssist] Error: Empty response from Python script." 
         return {"error": "Empty response from Python script."}
     endif
 
@@ -58,57 +57,57 @@ def CallGeminiAPI(prompt_text: string, include_history: bool = true): dict<any>
     try
         response_dict = json_decode(response_text)
     catch /.*/
-        echoerr "[GeminiAssist] Error: Could not decode JSON response from Python: " .. response_text # Renamed
+        echoerr "[GeminiAssist] Error: Could not decode JSON response from Python: " .. response_text 
         return {"error": "Invalid JSON response from Python script: " .. response_text}
     endtry
 
     return response_dict
 enddef
 
-export def SendMessage(user_message: string)  # Renamed from SendChatMessage
+export def SendMessage(user_message: string)  
     if empty(user_message)
         return
     endif
 
-    var assist_bufnr = bufwinnr(ASSIST_BUFFER_NAME) # Renamed
+    var assist_bufnr = bufwinnr(ASSIST_BUFFER_NAME) 
     if assist_bufnr == -1
-        OpenAssistBuffer() # Renamed
-        assist_bufnr = bufwinnr(ASSIST_BUFFER_NAME) # Renamed
+        OpenAssistBuffer() 
+        assist_bufnr = bufwinnr(ASSIST_BUFFER_NAME) 
     endif
     if assist_bufnr == -1
-        echoerr "[GeminiAssist] Could not open or find assist buffer." # Renamed
+        echoerr "[GeminiAssist] Could not open or find assist buffer." 
         return
     endif
 
     var current_buf = bufnr()
     var current_win = win_getid()
-    var switched_to_assist = false # Renamed
+    var switched_to_assist = false 
 
-    if bufnr('%') != buf číslo(ASSIST_BUFFER_NAME) # Renamed
-        var assist_winid = 0 # Renamed
+    if bufnr('%') != buf číslo(ASSIST_BUFFER_NAME) 
+        var assist_winid = 0 
         for tabnr in range(1, tabpagenr('$'))
             for winid in tabpage_winids(tabnr)
-                if bufwinnr(winid) > 0 && getbufvar(winbufnr(winid), '&buftype') == 'nofile' && getbufvar(winbufnr(winid), 'bufname') == ASSIST_BUFFER_NAME # Renamed
-                    assist_winid = winid # Renamed
+                if bufwinnr(winid) > 0 && getbufvar(winbufnr(winid), '&buftype') == 'nofile' && getbufvar(winbufnr(winid), 'bufname') == ASSIST_BUFFER_NAME 
+                    assist_winid = winid 
                     break
                 endif
             endfor
-            if assist_winid > 0 then break endif # Renamed
+            if assist_winid > 0 then break endif 
         endfor
         
-        if assist_winid > 0 # Renamed
-            win_gotoid(assist_winid) # Renamed
-            switched_to_assist = true # Renamed
+        if assist_winid > 0 
+            win_gotoid(assist_winid) 
+            switched_to_assist = true 
         else
-            Log("Assist window not found, cannot append message.") # Renamed
+            Log("Assist window not found, cannot append message.") 
             return
         endif
     endif
     
     append('$', printf("You: %s", user_message))
-    add(g:gemini_assist_history, {"role": "user", "parts": [{"text": user_message}]}) # Renamed
-    if len(g:gemini_assist_history) > 40 # Renamed
-        g:gemini_assist_history = g:gemini_assist_history[-40:] # Renamed
+    add(g:gemini_assist_history, {"role": "user", "parts": [{"text": user_message}]}) 
+    if len(g:gemini_assist_history) > 40 
+        g:gemini_assist_history = g:gemini_assist_history[-40:] 
     endif
 
     append('$', "Gemini: Thinking...")
@@ -126,7 +125,7 @@ export def SendMessage(user_message: string)  # Renamed from SendChatMessage
         call setline(thinking_line, current_line_content .. "Error: " .. response.error)
     elseif haskey(response, "text")
         var gemini_response_text = response.text
-        add(g:gemini_assist_history, {"role": "model", "parts": [{"text": gemini_response_text}]}) # Renamed
+        add(g:gemini_assist_history, {"role": "model", "parts": [{"text": gemini_response_text}]}) 
 
         var lines = split(gemini_response_text, '\n')
         var in_code_block = false
@@ -200,21 +199,21 @@ export def SendMessage(user_message: string)  # Renamed from SendChatMessage
     cursor(line('$'), 1)
     normal! Gz$ 
     
-    if switched_to_assist # Renamed
+    if switched_to_assist 
         win_gotoid(current_win)
     endif
     
     redraw
 enddef
 
-export def OpenAssistBuffer() # Renamed
-    var assist_buf_target = bufwinnr(ASSIST_BUFFER_NAME) # Renamed
+export def OpenAssistBuffer() 
+    var assist_buf_target = bufwinnr(ASSIST_BUFFER_NAME) 
     if assist_buf_target != -1
         execute assist_buf_target .. 'wincmd w'
         return
     endif
 
-    silent execute 'botright vsplit ' .. ASSIST_BUFFER_NAME # Renamed
+    silent execute 'botright vsplit ' .. ASSIST_BUFFER_NAME 
     
     setlocal buftype=nofile
     setlocal bufhidden=hide
@@ -224,11 +223,11 @@ export def OpenAssistBuffer() # Renamed
 
     nnoremap <buffer> <silent> q :bdelete<CR>
 
-    if empty(g:gemini_assist_history) # Renamed
-        append(0, ["Gemini Assist Initialized. Type :GeminiAssist <your message> or use mappings."]) # Renamed
+    if empty(g:gemini_assist_history) 
+        append(0, ["Gemini Assist Initialized. Type :GeminiAssist <your message> or use mappings."]) 
     else
-        append(0, "Gemini Assist (restored)") # Renamed
-        for entry in g:gemini_assist_history # Renamed
+        append(0, "Gemini Assist (restored)") 
+        for entry in g:gemini_assist_history 
             var prefix = (entry.role == "user") ? "You: " : "Gemini: "
             var text_parts = entry.parts
             var message_text = ""
@@ -240,7 +239,7 @@ export def OpenAssistBuffer() # Renamed
     endif
     normal! G
     redraw
-    Log("Assist buffer opened.") # Renamed
+    Log("Assist buffer opened.") 
 enddef
 
 export def GetVisualSelection(): string
@@ -276,13 +275,13 @@ enddef
 export def PromptAndSendSelection(base_cmd_name: string)
     var user_prompt = input("Gemini prompt for selection: ")
     if empty(user_prompt)
-        echo "[GeminiAssist] Prompt cancelled." # Renamed
+        echo "[GeminiAssist] Prompt cancelled." 
         return
     endif
     var [sl, sc] = getpos("'<")[1:2]
     var [el, ec] = getpos("'>")[1:2]
     if sl == 0 || el == 0
-      echo "[GeminiAssist] No visual selection to send." # Renamed
+      echo "[GeminiAssist] No visual selection to send." 
       return
     endif
     # Escape user_prompt for command execution
