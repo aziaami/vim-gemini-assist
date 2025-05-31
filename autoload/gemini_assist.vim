@@ -1,7 +1,9 @@
 vim9script
 
 # Stores the interaction history
-var g:gemini_assist_history = []
+# Corrected E1016: Removed 'var' from global variable declaration.
+g:gemini_assist_history = []
+
 const s:python_executable: string = exepath('python3')
 const s:python_script_path: string = expand('<sfile>:h:h') .. '/python3/gemini_handler.py'
 const ASSIST_BUFFER_NAME = '__GeminiAssist__'
