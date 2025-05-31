@@ -12,14 +12,13 @@ if !isdirectory(autoload_path)
 endif
 
 # --- User Commands ---
-# Corrected: Removed s: from calls to script-local functions
-command! GeminiAssistOpen call gemini_assist.OpenAssistBuffer()
-command! -nargs=+ GeminiAssist call gemini_assist.SendMessage(<q-args>)
+# Corrected: Changed . to # for calling autoloaded functions
+command! GeminiAssistOpen call gemini_assist#OpenAssistBuffer()
+command! -nargs=+ GeminiAssist call gemini_assist#SendMessage(<q-args>)
 command! -nargs=* -range GeminiAssistSelection <line1>,<line2>call HandleSelection(<q-args>, <line1>, <line2>)
 command! -nargs=+ GeminiAssistBuffer call HandleCurrentBuffer(<q-args>)
 
-# --- Helper functions for commands ---
-# Corrected: Removed s: from function definitions
+# --- Helper functions for commands (script-local) ---
 def HandleSelection(custom_prompt_parts: list<string>, first: number, last: number)
     var selected_lines = getline(first, last)
     var selected_text = join(selected_lines, "\n")
@@ -37,11 +36,11 @@ def HandleSelection(custom_prompt_parts: list<string>, first: number, last: numb
         full_prompt = "Regarding the following code:\n\n```\n" .. selected_text .. "\n```\n\nWhat would you like to do or know?"
     endif
     
-    gemini_assist.SendMessage(full_prompt)
+    gemini_assist#SendMessage(full_prompt) # Corrected
 enddef
 
 def HandleCurrentBuffer(custom_prompt_parts: list<string>)
-    var buffer_content = gemini_assist.GetCurrentBufferContent()
+    var buffer_content = gemini_assist#GetCurrentBufferContent() # Corrected
     if empty(buffer_content)
         echo "[GeminiAssist] Current buffer is empty."
         return
@@ -55,13 +54,11 @@ def HandleCurrentBuffer(custom_prompt_parts: list<string>)
         full_prompt = "Regarding the content of the current file:\n---\n" .. buffer_content .. "\n---\n\nWhat would you like to do or know?"
     endif
 
-    gemini_assist.SendMessage(full_prompt)
+    gemini_assist#SendMessage(full_prompt) # Corrected
 enddef
 
-# Corrected: Removed s: from function definition
-# This function is intended to be called by mappings defined in this plugin file (if any)
-# or if you choose to expose it via a command that then calls this.
-# For user .vimrc mappings that need to prompt, they should typically call the autoloaded version:
+# This script-local function is for potential use by mappings defined *within this plugin file*.
+# For user .vimrc mappings that need to prompt, they should call the autoloaded version:
 # gemini_assist#PromptAndSendSelection('CommandNameToUse')
 def PromptAndSendSelection(base_cmd: string)
     var user_prompt = input("Gemini prompt for selection: ")
