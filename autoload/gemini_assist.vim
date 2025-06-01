@@ -107,7 +107,7 @@ export def SendMessage(user_message: string)
         var assist_win_id = 0
         # Iterate through all windows in all tabpages to find the assist buffer's window
         for tabnr in range(1, tabpagenr('$'))
-            for winid_in_tab in tabpage_winids(tabnr)
+            for winid_in_tab in tabpagebuflist(tabnr)
                 # getbufinfo returns a list, check if it's not empty
                 var buf_info_list = getbufinfo(winbufnr(winid_in_tab))
                 if !empty(buf_info_list) && buf_info_list[0].name =~ ASSIST_BUFFER_NAME 
