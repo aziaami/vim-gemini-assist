@@ -126,10 +126,10 @@ export def SendMessage(user_message: string)
 
     call setline(thinking_line, "Gemini: ") 
     
-    if haskey(response, "error")
+    if has_key(response, "error")
         var current_line_content = getline(thinking_line)
         call setline(thinking_line, current_line_content .. "Error: " .. response.error)
-    elseif haskey(response, "text")
+    elseif has_key(response, "text")
         var gemini_response_text = response.text
         add(g:gemini_assist_history, {"role": "model", "parts": [{"text": gemini_response_text}]})
 
@@ -191,7 +191,7 @@ export def OpenAssistBuffer()
             var prefix = (entry.role == "user") ? "You: " : "Gemini: "
             var text_parts = entry.parts
             var message_text = ""
-            if !empty(text_parts) && haskey(text_parts[0], "text")
+            if !empty(text_parts) && has_key(text_parts[0], "text")
                 message_text = text_parts[0].text
             endif
             append('$', prefix .. message_text) 
