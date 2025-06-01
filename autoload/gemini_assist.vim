@@ -77,41 +77,71 @@ export def SendMessage(user_message: string)
         return
     endif
 
-    var assist_bufnr = bufwinnr(ASSIST_BUFFER_NAME) # ASSIST_BUFFER_NAME is a script-local const
-    if assist_bufnr == -1
-        OpenAssistBuffer()
-        assist_bufnr = bufwinnr(ASSIST_BUFFER_NAME)
+    var assist_bufnr = bufwinnr(ASSIST_BUFFER_NAME)
+    if assist_bufnr == -1 # If no window is associated with the buffer
+        # Try to find the buffer number directly, maybe it exists but has no window
+        assist_bufnr = bufnr(ASSIST_BUFFER_NAME)
+        if assist_bufnr == -1 # Buffer truly doesn't exist
+            OpenAssistBuffer() # This will create it and a window
+            assist_bufnr = bufnr(ASSIST_BUFFER_NAME) # Get its number
+        else # Buffer exists, but no window - OpenAssistBuffer will switch or open a window
+            OpenAssistBuffer() 
+        endif
+        # Re-check window association after OpenAssistBuffer
+        assist_bufnr = bufwinnr(ASSIST_BUFFER_NAME) 
     endif
-    if assist_bufnr == -1
-        echoerr "[GeminiAssist] Could not open or find assist buffer."
+
+    if assist_bufnr == -1 # If still -1, OpenAssistBuffer failed to create/find window
+        echoerr "[GeminiAssist] Could not open or find assist buffer window."
         return
     endif
 
-    var current_buf = bufnr()
-    var current_win = win_getid()
-    var switched_to_assist = false
+    var current_buf_nr_on_entry = bufnr('%') # Store current buffer number when function is called
+    var current_win_id_on_entry = win_getid()   # Store current window ID
+    var switched_to_assist_buffer_window = false
 
+    # Check if the current buffer (in the active window) is the assist buffer
+    # Corrected line:
     if bufnr('%') != bufnr(ASSIST_BUFFER_NAME)
-        var assist_winid = 0
+        # If not, we need to find the assist buffer's window and switch to it
+        var assist_win_id = 0
+        # Iterate through all windows in all tabpages to find the assist buffer's window
         for tabnr in range(1, tabpagenr('$'))
-            for winid in tabpage_winids(tabnr)
-                if bufwinnr(winid) > 0 && getbufvar(winbufnr(winid), '&buftype') == 'nofile' && getbufvar(winbufnr(winid), 'bufname') == ASSIST_BUFFER_NAME
-                    assist_winid = winid
+            for winid_in_tab in tabpage_winids(tabnr)
+                # getbufinfo returns a list, check if it's not empty
+                var buf_info_list = getbufinfo(winbufnr(winid_in_tab))
+                if !empty(buf_info_list) && buf_info_list[0].name =~ ASSIST_BUFFER_NAME 
+                    assist_win_id = winid_in_tab
                     break
                 endif
             endfor
-            if assist_winid > 0 then break endif
+            if assist_win_id > 0 then break endif
         endfor
         
-        if assist_winid > 0
-            win_gotoid(assist_winid)
-            switched_to_assist = true
+        if assist_win_id > 0
+            win_gotoid(assist_win_id) # Switch to the assist buffer's window
+            switched_to_assist_buffer_window = true
         else
-            Log("Assist window not found, cannot append message.")
-            return
+            # This case should ideally be handled by OpenAssistBuffer ensuring a window exists.
+            # If we reach here, it means assist_bufnr (from bufwinnr) found a window,
+            # but now we can't find it by iterating, which is contradictory.
+            # Or, if assist_bufnr was from bufnr() only, and OpenAssistBuffer didn't set up a window correctly.
+            Log("Assist window not found by iteration, cannot append message. Buffer may exist without window.")
+            # Attempt to force OpenAssistBuffer again to ensure a window context
+            OpenAssistBuffer()
+            if bufnr('%') != bufnr(ASSIST_BUFFER_NAME) # If still not in assist buffer window
+                echoerr "[GeminiAssist] Failed to switch to the assist buffer window."
+                return
+            endif
+            # If OpenAssistBuffer switched context, mark it
+            switched_to_assist_buffer_window = true 
         endif
     endif
     
+    # At this point, we should be in the assist buffer's window
+    # Make buffer modifiable to append text
+    setlocal modifiable
+
     append('$', printf("You: %s", user_message))
     add(g:gemini_assist_history, {"role": "user", "parts": [{"text": user_message}]})
     if len(g:gemini_assist_history) > 40
@@ -120,9 +150,15 @@ export def SendMessage(user_message: string)
 
     append('$', "Gemini: Thinking...")
     var thinking_line = line('$')
-    redraw
+    redraw # Show "Thinking..."
 
-    var response = CallGeminiAPI(user_message) # Internal call to script-local function
+    # No longer modifiable while thinking, API call can take time
+    setlocal nomodifiable 
+
+    var response = CallGeminiAPI(user_message)
+
+    # Make modifiable again to write response
+    setlocal modifiable
 
     call setline(thinking_line, "Gemini: ") 
     
@@ -136,31 +172,45 @@ export def SendMessage(user_message: string)
         var lines = split(gemini_response_text, '\n')
         
         if len(lines) > 0
-            if !matchstr(lines[0], '^```')
-                call setline(thinking_line, getline(thinking_line) .. lines[0])
-                remove(lines, 0) 
+            if !matchstr(lines[0], '^```') # If first line is not a code block start
+                call setline(thinking_line, getline(thinking_line) .. lines[0]) # Append to "Gemini: " line
+                remove(lines, 0) # Remove processed line
             endif
-        elseif len(lines) == 0 
+        elseif len(lines) == 0 # Empty response text
              call setline(thinking_line, getline(thinking_line) .. "[Empty Response]")
         endif
         
+        # Append remaining lines
         var append_target_line = thinking_line 
+        if line('$') > thinking_line && getline(thinking_line + 1) != "" # If first line was already part of a multi-line initial setline
+            # This condition might be tricky. Simpler to just append after current last line if lines exist.
+        endif
+
+        # Ensure appending after the (potentially updated) thinking_line
+        append_target_line = line('$') 
+
         for lnum in range(len(lines))
             var line_text = lines[lnum]
-            append(append_target_line, line_text)
-            append_target_line += 1 
+            # append() adds after the given line number. So, append after current last line.
+            append(line('$'), line_text) 
         endfor
 
-    else
+    else # Unexpected response format
         var current_line_content = getline(thinking_line)
         call setline(thinking_line, current_line_content .. "Unexpected response format: " .. json_encode(response))
     endif
 
+    # Ensure view is at the bottom and cursor is on the last line
     cursor(line('$'), 1) 
     normal! Gz$          
     
-    if switched_to_assist
-        win_gotoid(current_win)
+    # Restore original modifiable state (usually nomodifiable for the chat buffer)
+    setlocal nomodifiable 
+
+    # Switch back to the original window if we switched
+    if switched_to_assist_buffer_window && win_getid() != current_win_id_on_entry
+        win_gotoid(current_win_id_on_entry)
+        # Restore modifiable state of the original buffer too if necessary (usually not affected by setlocal)
     endif
     
     redraw
