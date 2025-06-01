@@ -91,7 +91,7 @@ export def SendMessage(user_message: string)
     var current_win = win_getid()
     var switched_to_assist = false
 
-    if bufnr('%') != buf číslo(ASSIST_BUFFER_NAME)
+    if bufnr('%') != bufnr(ASSIST_BUFFER_NAME)
         var assist_winid = 0
         for tabnr in range(1, tabpagenr('$'))
             for winid in tabpage_winids(tabnr)
