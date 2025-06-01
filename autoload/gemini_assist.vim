@@ -115,7 +115,9 @@ export def SendMessage(user_message: string)
                     break
                 endif
             endfor
-            if assist_win_id > 0 then break endif
+            if assist_win_id > 0
+              break
+            endif
         endfor
         
         if assist_win_id > 0
