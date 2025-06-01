@@ -175,14 +175,15 @@ export def OpenAssistBuffer()
 
     silent execute 'botright vsplit ' .. ASSIST_BUFFER_NAME
     
+    # Set options that don't prevent modification first
     setlocal buftype=nofile
     setlocal bufhidden=hide
     setlocal noswapfile
     setlocal filetype=markdown
-    setlocal nomodifiable
 
     nnoremap <buffer> <silent> q :bdelete<CR>
 
+    # Now, append initial content
     if empty(g:gemini_assist_history)
         append(0, ["Gemini Assist Initialized. Type :GeminiAssist <your message> or use mappings."])
     else
@@ -197,6 +198,11 @@ export def OpenAssistBuffer()
             append('$', prefix .. message_text) 
         endfor
     endif
+    
+    # All initial content is appended. Now make the buffer non-modifiable.
+    setlocal nomodifiable 
+
+    # Go to the end of the buffer
     normal! G
     redraw
     Log("Assist buffer opened.")
