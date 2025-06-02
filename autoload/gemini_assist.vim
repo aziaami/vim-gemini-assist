@@ -146,9 +146,9 @@ export def SendMessage(user_message: string)
 
     append('$', printf("You: %s", user_message))
     add(g:gemini_assist_history, {"role": "user", "parts": [{"text": user_message}]})
-    if len(g:gemini_assist_history) > 40
-        g:gemini_assist_history = g:gemini_assist_history[-40:]
-    endif
+    #if len(g:gemini_assist_history) > 40
+        #g:gemini_assist_history = g:gemini_assist_history[-40:]
+    #endif
 
     append('$', "Gemini: Thinking...")
     var thinking_line = line('$')
