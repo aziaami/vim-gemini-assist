@@ -171,14 +171,7 @@ export def SendMessage(user_message: string)
         var gemini_response_text = response.text
         add(g:gemini_assist_history, {"role": "model", "parts": [{"text": gemini_response_text}]})
 
-        var lines = split(gemini_response_text, '\n')
-        
-        if len(lines) > 0
-            if !matchstr(lines[0], '^```') # If first line is not a code block start
-                call setline(thinking_line, getline(thinking_line) .. lines[0]) # Append to "Gemini: " line
-                remove(lines, 0) # Remove processed line
-            endif
-        elseif len(lines) == 0 # Empty response text
+        if len(lines) == 0 # Empty response text
              call setline(thinking_line, getline(thinking_line) .. "[Empty Response]")
         endif
         
@@ -190,9 +183,10 @@ export def SendMessage(user_message: string)
 
         # Ensure appending after the (potentially updated) thinking_line
         append_target_line = line('$') 
+        var joined_lines = join(gemini_response_text, '\n')
 
-        for lnum in range(len(lines))
-            var line_text = lines[lnum]
+        for lnum in range(len(joined_lines))
+            var line_text = joined_lines[lnum]
             # append() adds after the given line number. So, append after current last line.
             append(line('$'), line_text) 
         endfor
